@@ -1,0 +1,56 @@
+name: Deploy to EKS
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPO: dynamic-app
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: ${{ secrets.ROLE_ARN }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Login to ECR
+      run: |
+        aws ecr get-login-password --region $AWS_REGION \
+        | docker login --username AWS --password-stdin ${{ secrets.ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com
+
+    - name: Build and Push Docker Image
+      run: |
+        IMAGE=${{ secrets.ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:latest
+        docker build -t $IMAGE .
+        docker push $IMAGE
+        echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+
+    - name: Update kubeconfig
+      run: |
+        aws eks update-kubeconfig --name ${{ secrets.CLUSTER_NAME }} --region $AWS_REGION
+
+    - name: Deploy Multiple Services
+      run: |
+        while IFS='|' read -r SERVICE ENV CUSTOM; do
+
+          NAME=$(echo "$SERVICE-$ENV" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-')
+
+          sed -e "s/{{NAME}}/$NAME/g" \
+              -e "s/{{IMAGE}}/$IMAGE/g" \
+              -e "s/{{SERVICE_NAME}}/$SERVICE/g" \
+              -e "s/{{ENV}}/$ENV/g" \
+              -e "s/{{CUSTOM_VALUE}}/$CUSTOM/g" \
+              deployment-template.yml > deploy-$NAME.yml
+
+          kubectl apply -f deploy-$NAME.yml
+
+        done < config.conf
