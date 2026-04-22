@@ -59,11 +59,11 @@ jobs:
 
           NAME=$(echo "$SERVICE-$ENV" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-')
 
-          sed -e "s/{{NAME}}/$NAME/g" \
-              -e "s/{{IMAGE}}/$IMAGE/g" \
-              -e "s/{{SERVICE_NAME}}/$SERVICE/g" \
-              -e "s/{{ENV}}/$ENV/g" \
-              -e "s/{{CUSTOM_VALUE}}/$CUSTOM/g" \
+          sed -e "s#{{NAME}}#$NAME#g" \
+              -e "s#{{IMAGE}}#$IMAGE#g" \
+              -e "s#{{SERVICE_NAME}}#$SERVICE#g" \
+              -e "s#{{ENV}}#$ENV#g" \
+              -e "s#{{CUSTOM_VALUE}}#$CUSTOM#g" \
               deployment-template.yml > deploy-$NAME.yml
 
           kubectl apply -f deploy-$NAME.yml
