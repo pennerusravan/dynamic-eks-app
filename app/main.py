@@ -1,16 +1,15 @@
-from fastapi import FastAPI
+from flask import Flask
 import os
 
-app = FastAPI()
+app = Flask(__name__)
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+@app.route("/")
+def home():
+    return f"""
+    Service: {os.getenv('SERVICE_NAME')}
+    Env: {os.getenv('ENV')}
+    Value: {os.getenv('CUSTOM_VALUE')}
+    """
 
-@app.get("/")
-def root():
-    return {
-        "SERVICE_NAME": os.getenv("SERVICE_NAME"),
-        "ENV": os.getenv("ENV"),
-        "CUSTOM_VALUE": os.getenv("CUSTOM_VALUE")
-    }
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000)

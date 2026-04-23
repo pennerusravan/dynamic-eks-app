@@ -1,5 +1,9 @@
-FROM python:3.11-slim
+FROM python:3.10
 
 WORKDIR /app
 
-CMD ["echo", "Hello from ECR test"]
+COPY app/ .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+CMD ["python", "main.py"]
